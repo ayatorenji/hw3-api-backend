@@ -12,5 +12,6 @@ const storage = multer.diskStorage({
     }
 });
 const uploadFile = multer({ storage: storage}).single("singlefile");
+//promisify => async-await
 const uploadMiddleware = util.promisify(uploadFile);
 module.exports = uploadMiddleware;
