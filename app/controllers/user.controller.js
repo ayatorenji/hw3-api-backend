@@ -70,43 +70,59 @@ const getAllUsers = (req,res)=>{
     });
 };
 
-// Update user
-const updateUser = (req, res) => {
+const updateUserCtrl = (req, res)=>{
     if(!req.body){
         res.status(400).send({message: "Content can not be empty."});
     }
-    const userId = req.params.id;
-    const salt = bcrypt.genSaltSync(10);
-    const userObj = new User({
+    const data = {
         fullname: req.body.fullname,
         email: req.body.email,
-        username: req.body.username,
-        password: bcrypt.hashSync(req.body.password, salt),
         img: req.body.img
-    });
-    User.updateById(userId, userObj, (err, data) => {
+    };
+    User.updateUser(req.params.id, data, (err, result)=>{
         if(err){
             if(err.kind == "not_found"){
-                res.status(404).send({message: `Not found User with id ${userId}.`});
-            } else {
-                res.status(500).send({message: "Error updating User with id " + userId});
+                res.status(401).send(
+                    {message: "Not found user: " + req.params.id}
+                    );
+            }else {
+                res.status(500).send(
+                    {message: "Error update user: " + req.params.id}
+                );
             }
-        } else res.send(data);
+        }else {
+            res.send(result);
+        }
     });
 };
 
-// Delete user
-const deleteUser = (req, res) => {
-    const userId = req.params.id;
-    User.remove(userId, (err, data) => {
+const deleteUser = (req, res)=>{
+    console.log("parameters: " + req.params.id + 
+    ", " + req.params.p1 + 
+    ", " + req.params.p2);
+    User.removeUser(req.params.id, (err, result)=>{
         if(err){
             if(err.kind == "not_found"){
-                res.status(404).send({message: `Not found User with id ${userId}.`});
-            } else {
-                res.status(500).send({message: "Could not delete User with id " + userId});
+                res.status(401).send(
+                    {message: "Not found user: " + req.params.id}
+                    );
             }
-        } else res.send({message: `User was deleted successfully!`});
+            else{
+                res.status(500).send(
+                    {message: "Error delete user: " + req.params.id}
+                    );
+            }
+        }else{
+            res.send(result);
+        }
     });
 };
 
-module.exports = { validUsername, createNewUser, login, getAllUsers, updateUser, deleteUser };
+module.exports = { 
+    validUsername, 
+    createNewUser, 
+    login, 
+    getAllUsers, 
+    updateUserCtrl,
+    deleteUser
+};

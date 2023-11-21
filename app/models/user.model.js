@@ -3,6 +3,7 @@ const jwt = require("jsonwebtoken");
 const scKey = require("../config/jwt.config");
 const bcrypt = require("bcryptjs/dist/bcrypt");
 const expireTime = "2h"; //token will expire in 2 hours
+const fs = require("fs");
 
 const User = function(user){
     this.fullname = user.fullname;
@@ -75,44 +76,72 @@ User.getAllRecords = (result)=>{
         result(null, res);
     });
 };
-
-// Update user by ID
-User.updateById = (userId, user, result) => {
-    sql.query("UPDATE users SET fullname = ?, email = ?, username = ?, password = ?, img = ? WHERE id = ?", 
-    [user.fullname, user.email, user.username, user.password, user.img, userId], 
-    (err, res) => {
+//const, var, let => function scope
+const removeOldImage = (id, result) => {
+    sql.query("SELECT * FROM users WHERE id=?", [id], (err, res)=>{
         if(err){
-            console.log("Error: ", err);
-            result(null, err);
+            console.log("error:" + err);
+            result(err, null);
             return;
         }
-        if(res.affectedRows == 0){
-            // No user found with the ID
-            result({ kind: "not_found" }, null);
-            return;
+        if(res.length){
+            let filePath = __basedir + "/assets/" + res[0].img;
+            try {
+                if(fs.existsSync(filePath)){
+                    fs.unlink(filePath, (e)=>{
+                        if(e){
+                            console.log("Error: " + e);
+                            return;
+                        }else{
+                            console.log("File: " + res[0].img + " was removed");
+                            return;
+                        }
+                    });
+                }else {
+                    console.log("File: " + res[0].img + " not found.")
+                    return;
+                }
+            } catch (error) {
+                console.log(error);
+                return;
+            }
         }
-        console.log("Updated user: ", { id: userId, ...user });
-        result(null, { id: userId, ...user });
     });
 };
 
-// Delete user by ID
-User.remove = (userId, result) => {
-    sql.query("DELETE FROM users WHERE id = ?", userId, (err, res) => {
+User.updateUser = (id, data, result)=>{
+    removeOldImage(id);
+    sql.query("UPDATE users SET fullname=?, email=?, img=? WHERE id=?", 
+    [data.fullname, data.email, data.img, id], (err, res)=>{
         if(err){
-            console.log("Error: ", err);
-            result(null, err);
+            console.log("Error: " + err);
+            result(err, null);
             return;
         }
         if(res.affectedRows == 0){
-            // No user found with the ID
-            result({ kind: "not_found" }, null);
+            //NO any record update
+            result({kind: "not_found"}, null);
             return;
         }
-        console.log("Deleted user with id: ", userId);
-        result(null, res);
+        console.log("Update user: " + {id: id, ...data});
+        result(null, {id: id, ...data});
+        return;
     });
 };
-
-
+User.removeUser = (id, result)=>{
+    removeOldImage(id);
+    sql.query("DELETE FROM users WHERE id=?", [id], (err, res)=>{
+        if(err){
+            console.log("Query error: " + err);
+            result(err, null);
+            return;
+        }
+        if(res.affectedRows == 0){
+            result({kind: "not_found"}, null);
+            return;
+        }
+        console.log("Deleted user id: " + id);
+        result(null, {id: id});
+    } );
+};
 module.exports = User;
